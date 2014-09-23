@@ -17,15 +17,12 @@
 package org.apache.spark.sql.execution
 
 import scala.collection.mutable.{ArrayBuffer, BitSet}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
-import scala.concurrent.duration._
+
 
 import org.apache.spark.annotation.DeveloperApi
-import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.plans._
-import org.apache.spark.sql.catalyst.plans.physical._
+
+
 
 @DeveloperApi
 sealed abstract class BuildSide2
@@ -42,8 +39,35 @@ case class RangeJoin(left: SparkPlan, right: SparkPlan, condition: Seq[Expressio
 
   //This is just a space holder here. I need to come back
   //with an actual implementation
-  def execute() = left.execute().map(_.copy()).cartesian(right.execute().map(_.copy())).map {
-    case (l: Row, r: Row) => buildRow(l ++ r)
+  lazy val (buildPlan, streamedPlan) = (left, right)
+
+  lazy val (buildKeys, streamedKeys) = (List(condition(0),condition(1)), List(condition(0), condition(1)))
+
+  @transient lazy val buildKeyGenerator = new Projection(buildKeys, buildPlan.output)
+
+  def execute() = {
+
+    val v1 = left.execute()
+    val currentRow = v1.first()
+    println("entire condition: " + condition.toString)
+    println("buildKeys: " + buildKeys.toString())
+    println("buildPlan.output: " + buildPlan.output)
+    println("currentRow " + currentRow)
+    val keysOfRow = buildKeyGenerator(currentRow)
+    println("keys: " + keysOfRow.toString())
+    //v1.map(_.getString(1)).collect().foreach(println)
+    val v2 = v1.map(_.copy())
+    val t = InterpretedPredicate(Some(condition(0)).map(c => BindReferences.bindReference(c, left.output ++ right.output)).getOrElse(Literal(true)))
+    println(t.toString())
+
+    //val keys1 = v2.map(condition(0).eval(_))
+    //keys1.collect.foreach(println)
+
+    val v3 = v2.cartesian(right.execute().map(_.copy()))
+    val v4 = v3.map {
+      case (l: Row, r: Row) => buildRow(l ++ r)
+    }
+    v4
   }
 
 
