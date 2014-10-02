@@ -190,9 +190,8 @@ class SqlParser extends AbstractSparkSQLParser {
           Join(lhs, rhs, joinType = jt.getOrElse(Inner), cond)
         }
     }
-
-  protected lazy val joinConditions: Parser[Expression] =
-    ON ~> expression
+   protected lazy val joinConditions: Parser[Expression] =
+     ON ~> expression
 
   protected lazy val joinType: Parser[JoinType] =
     ( INNER           ^^^ Inner
@@ -302,7 +301,8 @@ class SqlParser extends AbstractSparkSQLParser {
         }
     | (SUBSTR | SUBSTRING) ~ "(" ~> expression ~ ("," ~> expression) <~ ")" ^^
       { case s ~ p => Substring(s, p, Literal(Integer.MAX_VALUE)) }
-    | (SUBSTR | SUBSTRING) ~ "(" ~> expression ~ ("," ~> expression) ~ ("," ~> expression) <~ ")" ^^
+    | (SUBSTR | SUBSTRING) ~ "(" ~> expression ~ ("," ~> expression) ~
+      ("," ~> expression) <~ ")" ^^
       { case s ~ p ~ l => Substring(s, p, l) }
     | SQRT  ~ "(" ~> expression <~ ")" ^^ { case exp => Sqrt(exp) }
     | ABS   ~ "(" ~> expression <~ ")" ^^ { case exp => Abs(exp) }
