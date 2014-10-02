@@ -91,18 +91,12 @@ case class Join(
 
   override def output = {
     joinType match {
-      case LeftSemi =>{ println("!!!Join LeftSemi")
-        left.output}
-      case LeftOuter =>{ println("!!!Join LeftOuter")
-        left.output ++ right.output.map(_.withNullability(true))}
-      case RightOuter =>{ println("!!!Join RightOuter")
-        left.output.map(_.withNullability(true)) ++ right.output}
-      case FullOuter =>{ println("!!!Join FullOuter")
-        left.output.map(_.withNullability(true)) ++ right.output.map(_.withNullability(true))}
-      case _ => {
-        println("!!!Join " + left.output.toString())
-        left.output ++ right.output
-      }
+      case LeftSemi =>  left.output
+      case LeftOuter =>  left.output ++ right.output.map(_.withNullability(true))
+      case RightOuter =>  left.output.map(_.withNullability(true)) ++ right.output
+      case FullOuter =>  left.output.map(_.withNullability(true)) ++ right.output.map(_.withNullability(true))
+      case _ => left.output ++ right.output
+      
     }
   }
 }
@@ -113,15 +107,10 @@ case class RangeJoin(
   condition: Seq[Expression]) extends BinaryNode{
 
   override def references = {
-    println("!!!Condition: " + condition.toString())
-    println("!!!Condition map: " + condition.map(_.references).toString())
-    println("!!!Condition flatmap: " + condition.flatMap(_.references).toString)
     condition.flatMap(x => x.references).toSet
   }
 
   override def output = {
-    println("!!!RangeJoin left: " + left.output.toString() + "right: " + right.output.toString())
-    println("!!!References: " + references.toString())
     left.output ++ right.output
   }
 }

@@ -411,6 +411,8 @@ class SQLQuerySuite extends QueryTest {
       sql("SELECT * FROM lowerCaseData INTERSECT SELECT * FROM upperCaseData"), Nil)
   }
 
+
+
   test("SET commands semantics using sql()") {
     clear()
     val testKey = "test.key.0"

@@ -97,7 +97,7 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   object RangeJoin extends Strategy{
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match{
       case logical.RangeJoin(left, right, condition) =>
-        execution.RangeJoin(planLater(left), planLater(right), condition) :: Nil
+        execution.RangeJoin(planLater(left), planLater(right), condition, sqlContext) :: Nil
     }
   }
 

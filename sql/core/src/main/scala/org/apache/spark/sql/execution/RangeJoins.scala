@@ -16,54 +16,42 @@
 
 package org.apache.spark.sql.execution
 
-import scala.collection.mutable.{ArrayBuffer, BitSet}
-
-
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.sql.catalyst.expressions._
-
-
-
-@DeveloperApi
-sealed abstract class BuildSide2
+import org.apache.spark.sql.SQLContext
 
 @DeveloperApi
-case object BuildLeft2 extends BuildSide2
-
-@DeveloperApi
-case object BuildRight2 extends BuildSide2
-
-@DeveloperApi
-case class RangeJoin(left: SparkPlan, right: SparkPlan, condition: Seq[Expression]) extends BinaryNode{
+case class RangeJoin(left: SparkPlan, right: SparkPlan, condition: Seq[Expression], context: SQLContext) extends BinaryNode with Serializable{
   def output = left.output ++ right.output
 
-  //This is just a space holder here. I need to come back
-  //with an actual implementation
   lazy val (buildPlan, streamedPlan) = (left, right)
 
-  lazy val (buildKeys, streamedKeys) = (List(condition(0),condition(1)), List(condition(0), condition(1)))
+  lazy val (buildKeys, streamedKeys) = (List(condition(0),condition(1)), List(condition(2), condition(3)))
 
   @transient lazy val buildKeyGenerator = new Projection(buildKeys, buildPlan.output)
+  @transient lazy val streamKeyGenerator = new Projection(streamedKeys, streamedPlan.output)
 
   def execute() = {
 
     val v1 = left.execute()
-    val currentRow = v1.first()
-    println("entire condition: " + condition.toString)
-    println("buildKeys: " + buildKeys.toString())
-    println("buildPlan.output: " + buildPlan.output)
-    println("currentRow " + currentRow)
-    val keysOfRow = buildKeyGenerator(currentRow)
-    println("keys: " + keysOfRow.toString())
-    //v1.map(_.getString(1)).collect().foreach(println)
-    val v2 = v1.map(_.copy())
-    val t = InterpretedPredicate(Some(condition(0)).map(c => BindReferences.bindReference(c, left.output ++ right.output)).getOrElse(Literal(true)))
-    println(t.toString())
+    val v1kv = v1.map(x => {
+      val v1Key = buildKeyGenerator(x)
+      (new Interval[Long](v1Key.apply(0).asInstanceOf[Long], v1Key.apply(1).asInstanceOf[Long]),x.copy() )
+    })
 
-    //val keys1 = v2.map(condition(0).eval(_))
-    //keys1.collect.foreach(println)
+    val v2 = right.execute()
+    val v2kv = v2.map(x => {
+      val v2Key = streamKeyGenerator(x)
+      (new Interval[Long](v2Key.apply(0).asInstanceOf[Long], v2Key.apply(1).asInstanceOf[Long]), x.copy() )
+    })
 
-    val v3 = v2.cartesian(right.execute().map(_.copy()))
+    assert(v1.count <= v2.count) //As we are going to collect v1 and build an interval tree on its intervals,
+    // make sure that its size is the smaller one.
+
+
+    val v3 = RangeJoinImpl.overlapJoin(context.sparkContext, v1kv, v2kv)
+      .flatMap(l => l._2.map(r => (r,l._1)))
+
     val v4 = v3.map {
       case (l: Row, r: Row) => buildRow(l ++ r)
     }
@@ -71,4 +59,11 @@ case class RangeJoin(left: SparkPlan, right: SparkPlan, condition: Seq[Expressio
   }
 
 
+}
+
+case class Interval[T <% Long](start: T, end: T){
+  def overlaps(other: Interval[T]): Boolean = {
+    (end >= start) && (other.end >= other.start) &&
+      ((start >= other.start && start <= other.end) || (end >= other.start && end <= other.end))
+  }
 }
