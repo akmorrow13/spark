@@ -39,11 +39,11 @@ class IntervalTree[T](allRegions: List[(Interval[Long], T)]) extends Serializabl
       return resultFromThisNode ++ allOverlappingRegions(r, rt.leftChild)
     else if (r.start > rt.centerPoint)
       return resultFromThisNode ++ allOverlappingRegions(r, rt.rightChild)
-    else throw new NoSuchElementException("Interval Tree Exception. Illegal comparison for centerpoint " + rt.centerPoint)
+    else throw new NoSuchElementException("Interval Tree Exception. Illegal comparison for centerpoint " + rt.centerPoint +" " + r.toString + " cmp: " + r.overlaps(Interval[Long](rt.centerPoint, rt.centerPoint + 1)))
 
   }
 
-  class Node(allRegions: List[(Interval[Long], T)]) {
+  class Node(allRegions: List[(Interval[Long], T)]) extends Serializable{
 
     private val largestPoint = allRegions.maxBy(_._1.end)._1.end
     private val smallestPoint = allRegions.minBy(_._1.start)._1.start

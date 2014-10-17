@@ -64,6 +64,6 @@ case class RangeJoin(left: SparkPlan, right: SparkPlan, condition: Seq[Expressio
 case class Interval[T <% Long](start: T, end: T){
   def overlaps(other: Interval[T]): Boolean = {
     (end >= start) && (other.end >= other.start) &&
-      ((start >= other.start && start <= other.end) || (end >= other.start && end <= other.end))
+      (end > other.start && start < other.end)
   }
 }
