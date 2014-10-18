@@ -34,35 +34,42 @@ class SQLRangeJoinSuite extends QueryTest {
 
   test("joining non overlappings results into no entries"){
 
-  val rdd1 = sc.parallelize(Seq((1L,5L), (2L,7L))).map(i => RecordData1(i._1, i._2))
-  val rdd2 = sc.parallelize(Seq((11L,44L), (23L, 45L))).map(i => RecordData2(i._1, i._2))
+    val rdd1 = sc.parallelize(Seq((1L,5L), (2L,7L))).map(i => RecordData1(i._1, i._2))
+    val rdd2 = sc.parallelize(Seq((11L,44L), (23L, 45L))).map(i => RecordData2(i._1, i._2))
 
-  //val rdd1 = sc.parallelize(List((1L,"val1"), (10L,"val10"))).map(i => Record(i._1, i._2))
-  //val rdd2 = sc.parallelize(List((50L, "val10"), (523L, "val523"))).map(i => RecordTest(i._1, i._2))
-  rdd1.registerAsTable("t1")
-  rdd2.registerAsTable("t2")
-  checkAnswer(
-    sql("select * from t1 RANGEJOIN t2 on OVERLAPS( (start1, end1), (start2, end2))"),
-    Nil
-  )
+    //val rdd1 = sc.parallelize(List((1L,"val1"), (10L,"val10"))).map(i => Record(i._1, i._2))
+    //val rdd2 = sc.parallelize(List((50L, "val10"), (523L, "val523"))).map(i => RecordTest(i._1, i._2))
+    rdd1.registerAsTable("t1")
+    rdd2.registerAsTable("t2")
+    checkAnswer(
+      sql("select * from t1 RANGEJOIN t2 on OVERLAPS( (start1, end1), (start2, end2))"),
+      Nil
+    )
 
+  }
 
+  test("basic range join"){
+    val rdd1 = sc.parallelize(Seq((100L, 199L),
+      (200L, 299L),
+      (400L, 600L),
+      (10000L, 20000L)))
+      .map(i => RecordData1(i._1, i._2))
 
+    val rdd2 = sc.parallelize(Seq((150L, 250L),
+      (300L, 500L),
+      (500L, 700L),
+      (22000L, 22300L)))
+    rdd1.registerAsTable("s1")
+    rdd2.registerAsTable("s2")
 
-    /* val rdd1: RDD[Interval] = sc.parallelize(Seq(
-       ReferenceRegion("chr1", 100L, 200L),
-       ReferenceRegion("chr1", 400L, 600L),
-       ReferenceRegion("chr1", 700L, 800L),
-       ReferenceRegion("chr1", 900L, 1000L)))
-
-     val rdd2: RDD[ReferenceRegion] = sc.parallelize(Seq(
-       ReferenceRegion("chr2", 100L, 200L),
-       ReferenceRegion("chr2", 400L, 600L),
-       ReferenceRegion("chr1", 1100L, 1200L),
-       ReferenceRegion("chr1", 1400L, 1600L)))
-
-     assert(YetAnotherRegionJoin.overlapJoin(sc, rdd1, rdd2).count == 0)*/
-   }
+    checkAnswer(
+      sql("select start1, end1, start2, end2 from s1 RANGEJOIN s2 on OVERLAPS( (start1, end1), (start2, end2))"),
+      (100L, 199L, 150L, 250L) ::
+        (200L, 299L, 150L, 250L) ::
+        (400L, 600L, 300L, 500L) ::
+        (400L, 600L, 500L, 700L) :: Nil
+    )
+  }
 
   /* sparkTest("test join with non-perfect overlapping regions") {
      val rdd1: RDD[ReferenceRegion] = sc.parallelize(Seq(
