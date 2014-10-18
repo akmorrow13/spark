@@ -50,7 +50,7 @@ case class RangeJoin(left: SparkPlan, right: SparkPlan, condition: Seq[Expressio
 
 
     val v3 = RangeJoinImpl.overlapJoin(context.sparkContext, v1kv, v2kv)
-      .flatMap(l => l._2.map(r => (r,l._1)))
+      .flatMap(l => l._2.map(r => (l._1,r)))
 
     val v4 = v3.map {
       case (l: Row, r: Row) => buildRow(l ++ r)

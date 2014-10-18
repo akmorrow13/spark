@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql
+package org.apache.spark.sql.execution
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{SQLContext, QueryTest}
@@ -59,8 +59,12 @@ class SQLRangeJoinSuite extends QueryTest {
       (300L, 500L),
       (500L, 700L),
       (22000L, 22300L)))
+      .map(i => RecordData2(i._1, i._2))
+
     rdd1.registerAsTable("s1")
     rdd2.registerAsTable("s2")
+
+    //val srdd = sql("select start1, end1, start2, end2 from s1 RANGEJOIN s2 on OVERLAPS( (start1, end1), (start2, end2))")
 
     checkAnswer(
       sql("select start1, end1, start2, end2 from s1 RANGEJOIN s2 on OVERLAPS( (start1, end1), (start2, end2))"),
@@ -68,6 +72,11 @@ class SQLRangeJoinSuite extends QueryTest {
         (200L, 299L, 150L, 250L) ::
         (400L, 600L, 300L, 500L) ::
         (400L, 600L, 500L, 700L) :: Nil
+    )
+
+    checkAnswer(
+      sql("select end1 from s1 RANGEJOIN s2 on OVERLAPS( (start1, end1), (start2, end2))"),
+      Seq(199L) :: Seq(299L) :: Seq(600L) :: Seq(600L) :: Nil
     )
   }
 
