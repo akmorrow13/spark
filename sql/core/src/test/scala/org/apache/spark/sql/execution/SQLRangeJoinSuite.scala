@@ -34,9 +34,9 @@ class SQLRangeJoinSuite extends QueryTest {
     rdd1.registerTempTable("t1")
     rdd2.registerTempTable("t2")
     checkAnswer(
-      //sql("select * from t1 RANGEJOIN t2 on OVERLAPS( (start1, end1), (start2, end2))"),
-      sql("select * from t1 JOIN t2 on " +
-        "start1 < end1 and start2 < end2 and start1 < start2 and start2 < end1"),
+      sql("select * from t1 RANGEJOIN t2 on OVERLAPS( (start1, end1), (start2, end2))"),
+      /*sql("select * from t1 JOIN t2 on " +
+        "start1 < end1 and start2 < end2 and start1 < start2 and start2 < end1"),*/
       Nil
     )
   }
@@ -55,18 +55,18 @@ class SQLRangeJoinSuite extends QueryTest {
     rdd1.registerTempTable("s1")
     rdd2.registerTempTable("s2")
     checkAnswer(
-      //sql("select start1, end1, start2, end2 from s1 RANGEJOIN s2 on OVERLAPS( (start1, end1), (start2, end2))"),
-      sql("select * from s1 JOIN s2 on " +
-        "start1 < end1 and start2 < end2 and start1 < start2 and start2 < end1"),
+      sql("select start1, end1, start2, end2 from s1 RANGEJOIN s2 on OVERLAPS( (start1, end1), (start2, end2))"),
+      /*sql("select * from s1 JOIN s2 on " +
+        "start1 < end1 and start2 < end2 and start1 < start2 and start2 < end1"),*/
       (100L, 199L, 150L, 250L) ::
         (200L, 299L, 150L, 250L) ::
         (400L, 600L, 300L, 500L) ::
         (400L, 600L, 500L, 700L) :: Nil
     )
     checkAnswer(
-      //sql("select end1 from s1 RANGEJOIN s2 on OVERLAPS( (start1, end1), (start2, end2))"),
-      sql("select end1 from s1 JOIN s2 on " +
-        "start1 < end1 and start2 < end2 and start1 < start2 and start2 < end1"),
+      sql("select end1 from s1 RANGEJOIN s2 on OVERLAPS( (start1, end1), (start2, end2))"),
+     /* sql("select end1 from s1 JOIN s2 on " +
+        "start1 < end1 and start2 < end2 and start1 < start2 and start2 < end1"),*/
       Seq(199L) :: Seq(299L) :: Seq(600L) :: Seq(600L) :: Nil
     )
   }

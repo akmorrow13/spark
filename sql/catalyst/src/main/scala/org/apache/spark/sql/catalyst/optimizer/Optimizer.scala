@@ -421,7 +421,7 @@ object PushPredicateThroughJoin extends Rule[LogicalPlan] with PredicateHelper {
    * @return true if the plan matches one of the reserved conditions
    */
   private def patternReserved(plan: LogicalPlan) = plan match {
-    case ExtractRangeJoinKeys(_, _, _, _) => true
+    case ExtractRangeJoinKeys(_, _, _, _) => false //turn to true to prevent rangeJoin opt
     case _ => false
   }
 

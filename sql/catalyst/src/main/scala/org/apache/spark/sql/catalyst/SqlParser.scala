@@ -105,6 +105,8 @@ class SqlParser extends AbstractSparkSQLParser {
   protected val UPPER = Keyword("UPPER")
   protected val WHEN = Keyword("WHEN")
   protected val WHERE = Keyword("WHERE")
+  protected val RANGEJOIN = Keyword("RANGEJOIN")
+  protected val OVERLAPS = Keyword("OVERLAPS")
 
   // Use reflection to find the reserved words defined in this class.
   protected val reservedWords =
@@ -174,7 +176,7 @@ class SqlParser extends AbstractSparkSQLParser {
     )
 
   protected lazy val relation: Parser[LogicalPlan] =
-    joinedRelation | relationFactor
+    joinedRelation | rangeJoinedRelation | relationFactor
 
   protected lazy val relationFactor: Parser[LogicalPlan] =
     ( ident ~ (opt(AS) ~> opt(ident)) ^^ {
@@ -192,6 +194,16 @@ class SqlParser extends AbstractSparkSQLParser {
     }
    protected lazy val joinConditions: Parser[Expression] =
      ON ~> expression
+
+  protected lazy val rangeJoinedRelation: Parser[LogicalPlan] =
+    relationFactor ~ RANGEJOIN ~ relationFactor ~ ON ~ OVERLAPS ~
+    "(" ~ "(" ~ expression ~ "," ~ expression ~ ")" ~ "," ~
+    "(" ~ expression ~ "," ~ expression ~ ")" ~ ")" ^^ {
+      case r1 ~ _ ~ r2 ~ _ ~ _ ~ _ ~ _ ~ e1 ~ _ ~ e2 ~ _ ~ _ ~ _ ~ e3 ~ _ ~ e4 ~ _ ~ _ =>
+        RangeJoin(r1, r2, Seq(e1, e2, e3, e4))
+    }
+
+  protected lazy val rangeJoinConditions: Parser[Seq[Expression]] = repN(4, projection)
 
   protected lazy val joinType: Parser[JoinType] =
     ( INNER           ^^^ Inner
