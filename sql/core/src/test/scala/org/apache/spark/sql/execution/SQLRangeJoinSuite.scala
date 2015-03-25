@@ -22,6 +22,8 @@ import org.apache.spark.sql.test._
 
 case class RecordData1(start1: Long, end1: Long) extends Serializable
 case class RecordData2(start2: Long, end2: Long) extends Serializable
+case class GenomicRegion1(start1: Long, end1: Long, chr1: String) extends Serializable
+case class GenomicRegion2(start2: Long, end2: Long, chr2: String) extends Serializable
 
 class SQLRangeJoinSuite extends QueryTest {
   val sc = TestSQLContext.sparkContext
@@ -69,5 +71,37 @@ class SQLRangeJoinSuite extends QueryTest {
         "start1 < end1 and start2 < end2 and start1 < start2 and start2 < end1"),*/
       Seq(199L) :: Seq(299L) :: Seq(600L) :: Seq(600L) :: Nil
     )
+  }
+
+  test("range join with genomic overlaps"){
+    val rdd1 = sc.parallelize(Seq((100L, 199L, "chr1"),
+      (200L, 299L, "chr1"),
+      (400L, 600L, "chr1"),
+      (1000L, 2000L, "chr2"),
+      (100L, 199L, "chr13"),
+      (200L, 299L, "chr13"),
+      (400L, 600L, "chr13")))
+    .map(i => GenomicRegion1(i._1, i._2, i._3))
+    val rdd2 = sc.parallelize(Seq((150L, 250L, "chr1"),
+      (150L, 250L, "chr13"),
+      (1400L, 1600L, "chr1"),
+      (150L, 250L, "chr2"),
+      (150L, 250L, "chr3"),
+      (150L, 250L, "chr4"),
+      (150L, 250L, "chr5"),
+      (150L, 250L, "chr15")))
+    .map(i => GenomicRegion2(i._1, i._2, i._3))
+    rdd1.registerTempTable("s1")
+    rdd2.registerTempTable("s2")
+
+    checkAnswer(
+    sql("select start1, end1, chr1, start2, end2, chr2 from s1 RANGEJOIN s2 on " +
+      "GENOMEOVERLAP( (start1, end1, chr1), (start2, end2, chr2) )"),
+      (100, 199, "chr1", 150, 250, "chr1") ::
+        (200, 299, "chr1", 150, 250, "chr1") ::
+        (100, 199, "chr13", 150, 250, "chr13") ::
+        (200, 299, "chr13", 150, 250, "chr13") :: Nil
+    )
+
   }
 }
